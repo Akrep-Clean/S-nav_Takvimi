@@ -128,7 +128,11 @@ class AdminWindow:
         messagebox.showinfo("Raporlar", "Sistem raporları oluşturulacak...")
         # Burada PDF/Excel raporları oluşturulacak
     def excel_upload(self):
-        excel_upload_window.ExcelUploadWindow().show()
+        try:
+            excel_app = excel_upload_window.ExcelUploadWindow()
+            excel_app.show()
+        except Exception as e:
+            messagebox.showerror("Hata", f"Excel yükleme ekranı açılamadı: {str(e)}")    
 
     def logout(self):
         self.root.destroy()

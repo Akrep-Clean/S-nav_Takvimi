@@ -20,6 +20,9 @@ class ExcelUploadWindow:
         self.department_id = department_id
         
         self.create_widgets()
+    
+    def show(self):
+        self.root.mainloop()
         
     def create_widgets(self):
         # BAŞLIK
@@ -228,9 +231,9 @@ class ExcelUploadWindow:
             # Öğrenci listesi şablonu oluştur
             data = {
                 'Öğrenci No': ['260201001', '260201002', '260201003'],
-                'Ad-Soyad': ['Ahmet Yılmaz', 'Ayşe Demir', 'Mehmet Kaya'],
+                'Ad Soyad': ['Ahmet Yılmaz', 'Ayşe Demir', 'Mehmet Kaya'],
                 'Sınıf': ['1. Sınıf', '1. Sınıf', '1. Sınıf'],
-                'Ders Kodu': ['CSE101', 'CSE101', 'CSE101']
+                'Ders ': ['CSE101', 'CSE101', 'CSE101']
             }
             
             df = pd.DataFrame(data)
@@ -257,15 +260,27 @@ class ExcelUploadWindow:
             
             # Excel'i oku
             df = pd.read_excel(self.course_file_path.get())
+            
+            # DEBUG: Sütun isimlerini göster
+            print("📋 Ders Excel sütunları:", list(df.columns))
+            
+            # Gerekli sütunları kontrol et - DAHA ESNEK
+            required_columns = ['Ders Kodu', 'Ders Adı', 'Hoca', 'Tip']
+            found_columns = []
+            
+            for req_col in required_columns:
+                for actual_col in df.columns:
+                    if req_col.lower() in actual_col.lower():
+                        found_columns.append(actual_col)
+                        break
+                else:
+                    messagebox.showerror("Hata", 
+                                       f"Eksik sütun: '{req_col}'\n\n"
+                                       f"Mevcut sütunlar: {list(df.columns)}")
+                    return
+            
             self.progress['value'] = 30
             self.status_label.config(text="Veritabanına kaydediliyor...")
-            
-            # Gerekli sütunları kontrol et
-            required_columns = ['Ders Kodu', 'Ders Adı', 'Hoca', 'Tip']
-            for col in required_columns:
-                if col not in df.columns:
-                    messagebox.showerror("Hata", f"Eksik sütun: {col}\n\nLütfen şablonu kullanın!")
-                    return
             
             # Database'e kaydet
             db = Database()
@@ -282,16 +297,16 @@ class ExcelUploadWindow:
                         (code, name, instructor, type, department_id)
                         VALUES (?, ?, ?, ?, ?)
                     ''', (
-                        str(row['Ders Kodu']), 
-                        str(row['Ders Adı']), 
-                        str(row['Hoca']), 
-                        str(row['Tip']), 
+                        str(row[found_columns[0]]), 
+                        str(row[found_columns[1]]), 
+                        str(row[found_columns[2]]), 
+                        str(row[found_columns[3]]), 
                         self.department_id
                     ))
                     success_count += 1
                     
                 except Exception as e:
-                    error_rows.append(index + 2)  # +2 because Excel rows start from 1 + header
+                    error_rows.append(index + 2)
                     print(f"Satır {index+2} hatası: {e}")
             
             conn.commit()
@@ -323,15 +338,27 @@ class ExcelUploadWindow:
             
             # Excel'i oku
             df = pd.read_excel(self.student_file_path.get())
+            
+            # DEBUG: Sütun isimlerini göster
+            print("📋 Öğrenci Excel sütunları:", list(df.columns))
+            
+            # Gerekli sütunları kontrol et - DAHA ESNEK
+            required_columns = ['Öğrenci No', 'Ad Soyad', 'Sınıf', 'Ders']
+            found_columns = []
+            
+            for req_col in required_columns:
+                for actual_col in df.columns:
+                    if req_col.lower() in actual_col.lower():
+                        found_columns.append(actual_col)
+                        break
+                else:
+                    messagebox.showerror("Hata", 
+                                       f"Eksik sütun: '{req_col}'\n\n"
+                                       f"Mevcut sütunlar: {list(df.columns)}")
+                    return
+            
             self.progress['value'] = 30
             self.status_label.config(text="Veritabanına kaydediliyor...")
-            
-            # Gerekli sütunları kontrol et
-            required_columns = ['Öğrenci No', 'Ad-Soyad', 'Sınıf', 'Ders Kodu']
-            for col in required_columns:
-                if col not in df.columns:
-                    messagebox.showerror("Hata", f"Eksik sütun: {col}\n\nLütfen şablonu kullanın!")
-                    return
             
             # Database'e kaydet
             db = Database()
@@ -343,15 +370,14 @@ class ExcelUploadWindow:
             
             for index, row in df.iterrows():
                 try:
-                    # Öğrenciyi ekle
                     cursor.execute('''
                         INSERT OR REPLACE INTO students 
                         (student_number, name, class, department_id)
                         VALUES (?, ?, ?, ?)
                     ''', (
-                        str(row['Öğrenci No']), 
-                        str(row['Ad-Soyad']), 
-                        str(row['Sınıf']), 
+                        str(row[found_columns[0]]), 
+                        str(row[found_columns[1]]), 
+                        str(row[found_columns[2]]), 
                         self.department_id
                     ))
                     
@@ -380,4 +406,4 @@ class ExcelUploadWindow:
 
 if __name__ == "__main__":
     app = ExcelUploadWindow()
-    app.root.mainloop()
+    app.show()
