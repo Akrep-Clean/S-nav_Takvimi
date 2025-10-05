@@ -98,8 +98,32 @@ class AdminWindow:
             height=3,
             command=self.excel_upload
         )
-        excel_upload_btn.grid(row=2, column=0, padx=10, pady=10)
+        excel_upload_btn.grid(row=3, column=0, padx=10, pady=10)
+        # Öğrenci Listesi Butonu
+        student_list_btn = tk.Button(
+            button_frame,
+            text="Öğrenci Listesi",
+            font=("Arial", 12, "bold"),
+            bg="#1abc9c",
+            fg="white",
+            width=20,
+            height=3,
+            command=self.show_student_list
+        )
+        student_list_btn.grid(row=2, column=0, padx=10, pady=10)
 
+        # Ders Listesi Butonu
+        course_list_btn = tk.Button(
+            button_frame,
+            text="Ders Listesi", 
+            font=("Arial", 12, "bold"),
+            bg="#e67e22",
+            fg="white",
+            width=20,
+            height=3,
+            command=self.show_course_list
+        )
+        course_list_btn.grid(row=2, column=1, padx=10, pady=10)
         # ÇIKIŞ BUTONU
         logout_btn = tk.Button(
             self.root,
@@ -129,11 +153,37 @@ class AdminWindow:
         # Burada PDF/Excel raporları oluşturulacak
     def excel_upload(self):
         try:
-            excel_app = excel_upload_window.ExcelUploadWindow()
+            import excel_upload_window
+            
+            # DEBUG: Department ID'yi göster
+            print(f"🎯 Admin Excel Upload - Department ID: {1}")  # Admin için 1 numaralı department
+            
+            # Department ID'yi geç - Admin için Bilgisayar Müh. (id=1)
+            excel_app = excel_upload_window.ExcelUploadWindow(department_id=1)
             excel_app.show()
         except Exception as e:
-            messagebox.showerror("Hata", f"Excel yükleme ekranı açılamadı: {str(e)}")    
+            messagebox.showerror("Hata", f"Excel penceresi açılamadı: {str(e)}")   
+    def show_student_list(self):
+        try:
+            import student_list_window
+            
+            # DEBUG: Department ID'yi göster
+            print(f"🎯 Admin Student List - Department ID: {1}")
+            
+            # Department ID'yi geç - Admin için Bilgisayar Müh. (id=1)
+            student_list_window.StudentListWindow(department_id=1).show()
+        except Exception as e:
+            messagebox.showerror("Hata", f"Öğrenci listesi açılamadı: {str(e)}")
 
+    def show_course_list(self):
+        try:
+            import course_list_window
+            print(f"🎯 Admin Course List - Department ID: {1}")
+            
+            # Department ID'yi geç - Admin için Bilgisayar Müh. (id=1)
+            course_list_window.CourseListWindow(department_id=1).show()
+        except Exception as e:
+            messagebox.showerror("Hata", f"Ders listesi açılamadı: {str(e)}")
     def logout(self):
         self.root.destroy()
         # Giriş ekranına dön

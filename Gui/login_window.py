@@ -58,7 +58,7 @@ class LoginWindow:
             command=self.login
         )
         login_button.pack(pady=20)
-
+    
     def login(self):
         email = self.email_entry.get()
         password = self.password_entry.get()
