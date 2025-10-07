@@ -15,8 +15,11 @@ class StudentListWindow:
         self.root.title("Öğrenci Listesi")
         self.root.geometry("800x500")
         self.root.configure(bg="#f0f0f0")
-        self.department_id = department_id
+    # DEPARTMENT ID'Yİ KESİN AYARLA
+        self.department_id = department_id if department_id else 1
         
+        # DEBUG
+        print(f"🎯 StudentListWindow AÇILDI - Department ID: {self.department_id}")
         self.create_widgets()
         self.load_students()
     

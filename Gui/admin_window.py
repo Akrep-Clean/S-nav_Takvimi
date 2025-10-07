@@ -76,6 +76,19 @@ class AdminWindow:
         )
         all_exams_btn.grid(row=1, column=0, padx=10, pady=10)
         
+        exam_schedule_btn = tk.Button(
+            button_frame,
+            text="Sınav Programı",
+            font=("Arial", 12, "bold"),
+            bg="#e74c3c",
+            fg="white",
+            width=20,
+            height=3,
+            command=self.show_exam_schedule
+        )
+        exam_schedule_btn.grid(row=3, column=0, padx=10, pady=10)  
+
+        
         # RAPORLAR BUTONU
         reports_btn = tk.Button(
             button_frame,
@@ -86,8 +99,20 @@ class AdminWindow:
             width=20,
             height=3,
             command=self.generate_reports
-        )
+        )        
         reports_btn.grid(row=1, column=1, padx=10, pady=10)
+        #__
+        classroom_btn = tk.Button(
+            button_frame,
+            text="Derslik Yönetimi",
+            font=("Arial", 12, "bold"),
+            bg="#f39c12",
+            fg="white",
+            width=20,
+            height=3,
+            command=self.manage_classrooms
+        )
+        classroom_btn.grid(row=4, column=0, padx=10, pady=10)        
         excel_upload_btn = tk.Button(
             button_frame,
             text="Excel ile Veri Yükle",
@@ -98,7 +123,7 @@ class AdminWindow:
             height=3,
             command=self.excel_upload
         )
-        excel_upload_btn.grid(row=3, column=0, padx=10, pady=10)
+        excel_upload_btn.grid(row=3, column=1, padx=10, pady=10)
         # Öğrenci Listesi Butonu
         student_list_btn = tk.Button(
             button_frame,
@@ -174,7 +199,12 @@ class AdminWindow:
             student_list_window.StudentListWindow(department_id=1).show()
         except Exception as e:
             messagebox.showerror("Hata", f"Öğrenci listesi açılamadı: {str(e)}")
-
+    def show_exam_schedule(self):
+        try:
+            import exam_schedule_window
+            exam_schedule_window.ExamScheduleWindow(department_id=1).show()
+        except Exception as e:
+            messagebox.showerror("Hata", f"Sınav programı penceresi açılamadı: {str(e)}")
     def show_course_list(self):
         try:
             import course_list_window
@@ -189,7 +219,12 @@ class AdminWindow:
         # Giriş ekranına dön
         from login_window import LoginWindow
         LoginWindow().show()
-
+    def manage_classrooms(self):
+        try:
+            import classroom_window
+            classroom_window.ClassroomWindow(department_id=1).show()
+        except Exception as e:
+            messagebox.showerror("Hata", f"Derslik yönetimi açılamadı: {str(e)}")
 if __name__ == "__main__":
     app = AdminWindow()
     app.show()

@@ -368,26 +368,10 @@ class ExcelUploadWindow:
             # Excel'i oku
             df = pd.read_excel(self.student_file_path.get())
             
-            # DEBUG: Sütun isimlerini göster
             print("📋 Öğrenci Excel sütunları:", list(df.columns))
             
-            # Gerekli sütunları kontrol et - DAHA ESNEK
-            required_columns = ['Öğrenci No', 'Ad Soyad', 'Sınıf', 'Ders']
-            found_columns = []
-            
-            for req_col in required_columns:
-                for actual_col in df.columns:
-                    if req_col.lower() in actual_col.lower():
-                        found_columns.append(actual_col)
-                        break
-                else:
-                    messagebox.showerror("Hata", 
-                                       f"Eksik sütun: '{req_col}'\n\n"
-                                       f"Mevcut sütunlar: {list(df.columns)}")
-                    return
-            
             self.progress['value'] = 30
-            self.status_label.config(text="Veritabanına kaydediliyor...")
+            self.status_label.config(text="Öğrenciler kaydediliyor...")
             
             # Database'e kaydet
             db = Database()
@@ -396,38 +380,83 @@ class ExcelUploadWindow:
             
             success_count = 0
             error_rows = []
+            total_courses_added = 0
             
             for index, row in df.iterrows():
                 try:
+                    row_num = index + 2  # Excel satır numarası (başlık + 1)
+                    
+                    # Temel öğrenci bilgilerini al
+                    student_no = str(row['Öğrenci No']).strip()
+                    name = str(row['Ad Soyad']).strip()
+                    class_name = str(row['Sınıf']).strip()
+                    
+                    print(f"👤 Öğrenci {student_no} işleniyor...")
+                    
+                    # Öğrenciyi ekle veya güncelle
                     cursor.execute('''
                         INSERT OR REPLACE INTO students 
                         (student_number, name, class, department_id)
                         VALUES (?, ?, ?, ?)
-                    ''', (
-                        str(row[found_columns[0]]), 
-                        str(row[found_columns[1]]), 
-                        str(row[found_columns[2]]), 
-                        self.department_id
-                    ))
+                    ''', (student_no, name, class_name, self.department_id))
+                    
+                    # Öğrenci ID'sini al
+                    cursor.execute('SELECT id FROM students WHERE student_number = ?', (student_no,))
+                    student_id = cursor.fetchone()[0]
+                    
+                    # Ders sütunlarını bul (Ders1, Ders2, Ders3...)
+                    course_columns = [col for col in df.columns if 'Ders' in col]
+                    courses_added = 0
+                    
+                    print(f"  📚 Ders sütunları: {course_columns}")
+                    
+                    for col in course_columns:
+                        if pd.notna(row[col]):
+                            course_code = str(row[col]).strip()
+                            
+                            if course_code:  # Boş değilse
+                                # Ders ID'sini bul
+                                cursor.execute('SELECT id FROM courses WHERE code = ? AND department_id = ?', 
+                                            (course_code, self.department_id))
+                                course_result = cursor.fetchone()
+                                
+                                if course_result:
+                                    course_id = course_result[0]
+                                    
+                                    # Öğrenci-ders ilişkisini ekle (çakışma olmazsa)
+                                    cursor.execute('''
+                                        INSERT OR IGNORE INTO student_courses 
+                                        (student_id, course_id)
+                                        VALUES (?, ?)
+                                    ''', (student_id, course_id))
+                                    
+                                    if cursor.rowcount > 0:
+                                        courses_added += 1
+                                        total_courses_added += 1
+                                        print(f"    ✅ Ders eklendi: {course_code}")
+                                    else:
+                                        print(f"    ⚠️ Ders zaten ekli: {course_code}")
+                                else:
+                                    print(f"    ❌ Ders bulunamadı: {course_code}")
                     
                     success_count += 1
+                    print(f"✅ Öğrenci {student_no} tamamlandı - {courses_added} ders eklendi")
                     
                 except Exception as e:
-                    error_rows.append(index + 2)
-                    print(f"Satır {index+2} hatası: {e}")
+                    error_rows.append(row_num)
+                    print(f"❌ Satır {row_num} hatası: {e}")
             
             conn.commit()
             conn.close()
             self.progress['value'] = 100
             
-            if error_rows:
-                messagebox.showwarning("Kısmen Başarılı", 
-                                      f"Yükleme tamamlandı!\nBaşarılı: {success_count}\nHatalı satırlar: {error_rows}")
-            else:
-                messagebox.showinfo("Başarılı", 
-                                   f"Tüm öğrenciler başarıyla yüklendi!\nToplam: {success_count} kayıt")
+            messagebox.showinfo("Başarılı", 
+                            f"✅ Öğrenciler yüklendi!\n"
+                            f"👥 Toplam öğrenci: {success_count}\n"
+                            f"📚 Toplam ders ilişkisi: {total_courses_added}\n"
+                            f"❌ Hatalı satırlar: {len(error_rows)}")
             
-            self.status_label.config(text=f"Öğrenci yükleme tamamlandı - {success_count} kayıt eklendi")
+            self.status_label.config(text=f"Öğrenci yükleme tamamlandı - {success_count} öğrenci")
             
         except Exception as e:
             messagebox.showerror("Hata", f"Dosya okuma hatası: {str(e)}")

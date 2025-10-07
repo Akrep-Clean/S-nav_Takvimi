@@ -15,8 +15,13 @@ class CourseListWindow:
         self.root.title("Ders Listesi")
         self.root.geometry("900x600")
         self.root.configure(bg="#f0f0f0")
-        self.department_id = department_id
         self.selected_course = None
+            # DEPARTMENT ID'Yİ KESİN AYARLA
+        self.department_id = department_id if department_id else 1
+        
+        # DEBUG
+        print(f"🎯 CourseListWindow AÇILDI - Department ID: {self.department_id}")
+        
         
         self.create_widgets()
         self.load_courses()
@@ -160,16 +165,41 @@ class CourseListWindow:
             conn = db.get_connection()
             cursor = conn.cursor()
             
+            # DEBUG: Kontrol mesajları
+            print(f"🔍 Ders için öğrenciler aranıyor: {course_code}")
+            print(f"🎯 Department ID: {self.department_id}")
+            
+            # Önce dersin ID'sini bulalım
+            cursor.execute('''
+                SELECT id FROM courses 
+                WHERE code = ? AND department_id = ?
+            ''', (course_code, self.department_id))
+            
+            course_result = cursor.fetchone()
+            
+            if not course_result:
+                print(f"❌ Ders bulunamadı: {course_code}")
+                # Treeview'ı temizle
+                for item in self.student_tree.get_children():
+                    self.student_tree.delete(item)
+                conn.close()
+                return
+            
+            course_id = course_result[0]
+            print(f"✅ Ders ID bulundu: {course_id}")
+            
+            # Bu dersi alan öğrencileri getir
             cursor.execute('''
                 SELECT s.student_number, s.name, s.class
                 FROM students s
                 JOIN student_courses sc ON s.id = sc.student_id
-                JOIN courses c ON sc.course_id = c.id
-                WHERE c.code = ? AND s.department_id = ?
+                WHERE sc.course_id = ? AND s.department_id = ?
                 ORDER BY s.student_number
-            ''', (course_code, self.department_id))
+            ''', (course_id, self.department_id))
             
             students = cursor.fetchall()
+            
+            print(f"📊 {course_code} dersini alan öğrenci sayısı: {len(students)}")
             
             # Treeview'ı temizle
             for item in self.student_tree.get_children():
@@ -179,11 +209,20 @@ class CourseListWindow:
             for student in students:
                 student_no, name, class_name = student
                 self.student_tree.insert("", "end", values=(student_no, name, class_name))
+                print(f"   👤 {student_no} - {name}")
             
             conn.close()
             
+            # Bilgi mesajı
+            if len(students) > 0:
+                self.root.title(f"Ders Listesi - {course_code} ({len(students)} öğrenci)")
+            else:
+                self.root.title(f"Ders Listesi - {course_code} (0 öğrenci)")
+                print(f"⚠️ Uyarı: {course_code} dersini alan öğrenci bulunamadı!")
+                
         except Exception as e:
             messagebox.showerror("Hata", f"Öğrenciler yüklenirken hata: {str(e)}")
+            print(f"❌ Hata: {e}")
 
 if __name__ == "__main__":
     app = CourseListWindow()
