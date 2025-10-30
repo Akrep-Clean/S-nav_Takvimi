@@ -17,7 +17,9 @@ class ExcelUploadWindow:
         self.root.title("Excel Yükleme - Ders ve Öğrenci Listeleri")
         self.root.geometry("700x500")
         self.root.configure(bg="#f0f0f0")
-        self.department_id = department_id
+        # Department ID'yi al, eğer yoksa varsayılan 1 (Admin) olsun
+        self.department_id = department_id if department_id else 1
+        print(f"ExcelUploadWindow açıldı - Department ID: {self.department_id}")
         
         self.create_widgets()
     
@@ -48,8 +50,9 @@ class ExcelUploadWindow:
         
         course_desc = tk.Label(
             course_frame,
-            text="Excel formatı: Ders Kodu, Ders Adı, Hoca, Tip (Zorunlu/Seçmeli)",
-            font=("Arial", 10),
+            # Açıklama güncellendi
+            text="PDF'teki formata benzer ('1. Sınıf', 'SEÇMELİ DERS' vb. ara başlıkları olan) dosyayı yükleyin.",
+            font=("Arial", 9), # Font küçültüldü
             bg="#f0f0f0",
             fg="#7f8c8d"
         )
@@ -87,7 +90,7 @@ class ExcelUploadWindow:
         
         template_course_btn = tk.Button(
             course_frame,
-            text="Şablon İndir",
+            text="Basit Şablon İndir", # İsim değişti
             font=("Arial", 10),
             bg="#f39c12",
             fg="white",
@@ -106,9 +109,10 @@ class ExcelUploadWindow:
         )
         student_frame.pack(pady=10, padx=20, fill="x")
         
+        # --- GÜNCELLENDİ: Öğrenci şablonu açıklaması (Uzun Format) ---
         student_desc = tk.Label(
             student_frame,
-            text="Excel formatı: Öğrenci No, Ad-Soyad, Sınıf, Ders Kodu",
+            text="Excel formatı: 'Öğrenci No', 'Ad Soyad', 'Sınıf', 'Ders'",
             font=("Arial", 10),
             bg="#f0f0f0",
             fg="#7f8c8d"
@@ -206,39 +210,34 @@ class ExcelUploadWindow:
     
     def download_course_template(self):
         try:
-            # Ders listesi şablonu oluştur - SENİN FORMATINDA
+            # Bu şablon basit, başlıklı format. PDF'teki ara-başlıklı değil.
             data = {
                 'DERS KODU': ['CSE101', 'CSE102', 'MATH101'],
                 'DERSİN ADI': ['Programlama', 'Veri Yapıları', 'Matematik'],
                 'DERSİ VEREN ÖĞR. ELEMANI': ['Dr. Ali Yılmaz', 'Dr. Ayşe Demir', 'Dr. Mehmet Kaya'],
-                'Tip': ['Zorunlu', 'Zorunlu', 'Zorunlu']
+                'Tip': ['Zorunlu', 'Zorunlu', 'Zorunlu'] 
             }
-            
             df = pd.DataFrame(data)
-            
-            # Kullanıcının masaüstüne kaydet
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-            template_path = os.path.join(desktop_path, "ders_listesi_sablonu.xlsx")
+            template_path = os.path.join(desktop_path, "ders_listesi_BASIT_sablon.xlsx")
             df.to_excel(template_path, index=False)
-            
-            messagebox.showinfo("Başarılı", f"Ders listesi şablonu masaüstünüze kaydedildi!\n\nYol: {template_path}")
-            
+            messagebox.showinfo("Başarılı", f"Basit ders listesi şablonu masaüstünüze kaydedildi!\n\nYol: {template_path}")
         except Exception as e:
             messagebox.showerror("Hata", f"Şablon oluşturulamadı: {str(e)}")
         
+    # --- GÜNCELLENDİ: Öğrenci şablonu (Uzun Format) ---
     def download_student_template(self):
         try:
-            # Öğrenci listesi şablonu oluştur
+            # Uzun formata göre güncellendi
             data = {
-                'Öğrenci No': ['260201001', '260201002', '260201003'],
-                'Ad Soyad': ['Ahmet Yılmaz', 'Ayşe Demir', 'Mehmet Kaya'],
+                'Öğrenci No': ['260201001', '260201001', '260201002'],
+                'Ad Soyad': ['Ahmet Yılmaz', 'Ahmet Yılmaz', 'Ayşe Demir'],
                 'Sınıf': ['1. Sınıf', '1. Sınıf', '1. Sınıf'],
-                'Ders ': ['CSE101', 'CSE101', 'CSE101']
+                'Ders': ['BLM101', 'FEF115', 'BLM101'] # Her satır 1 ders
             }
             
             df = pd.DataFrame(data)
             
-            # Kullanıcının masaüstüne kaydet
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
             template_path = os.path.join(desktop_path, "ogrenci_listesi_sablonu.xlsx")
             df.to_excel(template_path, index=False)
@@ -248,9 +247,11 @@ class ExcelUploadWindow:
         except Exception as e:
             messagebox.showerror("Hata", f"Şablon oluşturulamadı: {str(e)}")
     
+    # --- upload_courses (ARA BAŞLIKLI FORMATI OKUR - DOKUNMA) ---
     def upload_courses(self):
-        if not self.course_file_path.get():
-            messagebox.showerror("Hata", "Lütfen önce bir dosya seçin!")
+        file_path = self.course_file_path.get()
+        if not file_path:
+            messagebox.showerror("Hata", "Lütfen önce bir ders dosyası seçin!")
             return
         
         try:
@@ -258,17 +259,15 @@ class ExcelUploadWindow:
             self.status_label.config(text="Excel dosyası okunuyor...")
             self.root.update_idletasks()
             
-            # Excel'i oku - header olmadan okuyalım
-            df = pd.read_excel(self.course_file_path.get(), header=None)
+            # Başlıksız (header=None) oku
+            df = pd.read_excel(file_path, header=None)
             
-            # DEBUG: Tüm veriyi göster
-            print("📋 Excel verisi:")
+            print("📋 Excel (başlıksız) ders verisi okundu:")
             print(df.head(10))
-            
+
             self.progress['value'] = 30
-            self.status_label.config(text="Veriler analiz ediliyor...")
+            self.status_label.config(text="Dersler veritabanına kaydediliyor (format analiz ediliyor)...")
             
-            # Database'e kaydet
             db = Database()
             conn = db.get_connection()
             cursor = conn.cursor()
@@ -276,192 +275,228 @@ class ExcelUploadWindow:
             success_count = 0
             error_rows = []
             
-            current_type = "Zorunlu"  # Varsayılan tip
+            current_type = "Zorunlu"
             
-            # Excel formatını parse et
+            total_rows = len(df)
             for index, row in df.iterrows():
                 try:
-                    row_num = index + 1
+                    row_num = index + 1 
                     
-                    # DEBUG: Her satırı göster
-                    print(f"📝 Satır {row_num}: {list(row)}")
-                    
-                    # Boş satırları atla
                     if row.isnull().all():
                         continue
-                    
-                    # Sınıf başlıklarını kontrol et (1. Sınıf, 2. Sınıf vb.)
-                    first_cell = str(row[0]).strip() if pd.notna(row[0]) else ""
-                    
-                    if "sınıf" in first_cell.lower():
-                        print(f"🎯 Sınıf değişti: {first_cell}")
-                        continue
-                    
-                    # Seçmeli ders bölümünü kontrol et
-                    if "seçmeli" in first_cell.lower() or "seçimlik" in first_cell.lower():
+
+                    first_cell = str(row[0]).strip().lower()
+
+                    if "seçmeli" in first_cell or "seçimlik" in first_cell:
                         current_type = "Seçmeli"
-                        print(f"🎯 Ders tipi değişti: {current_type}")
-                        continue
+                        print(f"   -> Satır {row_num}: Ders tipi 'Seçmeli' olarak değişti.")
+                        continue 
+
+                    if "ders kodu" in first_cell or "sınıf" in first_cell:
+                        print(f"   -> Satır {row_num}: Başlık satırı atlandı.")
+                        continue 
                     
-                    # Başlık satırlarını atla ("DERS KODU", "DERSİN ADI" vb.)
-                    if any(keyword in first_cell.upper() for keyword in ['DERS KODU', 'DERSİN ADI', 'DERSİ VEREN']):
-                        print(f"📑 Başlık satırı atlandı: {first_cell}")
-                        continue
-                    
-                    # Veri satırlarını işle (3 sütunlu satırlar)
-                    if len(row) >= 3 and pd.notna(row[0]) and pd.notna(row[1]):
+                    if pd.notna(row[0]) and pd.notna(row[1]) and pd.notna(row[2]):
                         ders_kodu = str(row[0]).strip()
                         ders_adi = str(row[1]).strip()
-                        ogretmen = str(row[2]).strip() if pd.notna(row[2]) else "Belirtilmemiş"
-                        
-                        # Ders kodunun geçerli olduğundan emin ol (en az 3 karakter)
-                        if len(ders_kodu) >= 3:
-                            cursor.execute('''
-                                INSERT OR REPLACE INTO courses 
-                                (code, name, instructor, type, department_id)
-                                VALUES (?, ?, ?, ?, ?)
-                            ''', (ders_kodu, ders_adi, ogretmen, current_type, self.department_id))
+                        ogretmen = str(row[2]).strip()
+                        ders_tipi = current_type 
+
+                        if len(ders_kodu) < 3 or ' ' in ders_kodu:
+                            print(f"❌ Satır {row_num} atlandı - Geçersiz ders kodu: '{ders_kodu}'")
+                            error_rows.append(row_num)
+                            continue
                             
-                            success_count += 1
-                            print(f"✅ Satır {row_num} eklendi: {ders_kodu} - {ders_adi} ({current_type})")
-                        else:
-                            print(f"❌ Satır {row_num} atlandı - geçersiz ders kodu: {ders_kodu}")
-                    else:
-                        print(f"❌ Satır {row_num} atlandı - eksik bilgi")
+                        cursor.execute('''
+                            INSERT OR REPLACE INTO courses 
+                            (code, name, instructor, type, department_id)
+                            VALUES (?, ?, ?, ?, ?)
+                        ''', (ders_kodu, ders_adi, ogretmen, ders_tipi, self.department_id))
                         
+                        print(f"   ✅ Satır {row_num} eklendi: {ders_kodu} ({ders_tipi})")
+                        success_count += 1
+                    
+                    else:
+                         print(f"   -> Satır {row_num} atlandı (Eksik bilgi veya format dışı).")
+
                 except Exception as e:
+                    print(f"❌ Satır {row_num} işlenirken ciddi hata: {e}")
                     error_rows.append(row_num)
-                    print(f"❌ Satır {row_num} hatası: {e}")
+                
+                if total_rows > 0:
+                    self.progress['value'] = 30 + int(70 * (index + 1) / total_rows)
+                    self.root.update_idletasks()
+
             
             conn.commit()
             conn.close()
             self.progress['value'] = 100
             
             if success_count == 0:
-                messagebox.showwarning("Uyarı", 
-                                    f"Hiç ders bulunamadı!\n\n"
-                                    f"Lütfen Excel formatını kontrol edin.")
+                messagebox.showwarning("Başarısız", 
+                                    f"Hiç ders yüklenemedi!\n"
+                                    f"Dosya formatı beklenenden farklı olabilir.")
             elif error_rows:
                 messagebox.showwarning("Kısmen Başarılı", 
-                                    f"Yükleme tamamlandı!\nBaşarılı: {success_count}\nHatalı satırlar: {error_rows}")
+                                    f"Yükleme tamamlandı!\n"
+                                    f"Başarılı: {success_count} ders\n"
+                                    f"Hatalı satırlar: {len(error_rows)} ({', '.join(map(str, error_rows[:5]))}{'...' if len(error_rows) > 5 else ''})")
             else:
                 messagebox.showinfo("Başarılı", 
-                                f"Tüm dersler başarıyla yüklendi!\nToplam: {success_count} kayıt\n\n"
-                                f"Zorunlu/Seçmeli dersler otomatik ayarlandı!")
+                                f"Tüm dersler (Zorunlu/Seçmeli) başarıyla yüklendi!\nToplam: {success_count} kayıt.")
             
             self.status_label.config(text=f"Ders yükleme tamamlandı - {success_count} kayıt eklendi")
             
         except Exception as e:
-            messagebox.showerror("Hata", f"Dosya okuma hatası: {str(e)}")
+            messagebox.showerror("Hata", f"Dosya okuma/işleme hatası: {str(e)}")
             self.status_label.config(text="Hata oluştu!")
-    
+            self.progress['value'] = 0
+
+    # --- BU FONKSİYON TAMAMEN DEĞİŞTİ (YENİ UZUN FORMATA GÖRE) ---
     def upload_students(self):
-        if not self.student_file_path.get():
-            messagebox.showerror("Hata", "Lütfen önce bir dosya seçin!")
+        file_path = self.student_file_path.get()
+        if not file_path:
+            messagebox.showerror("Hata", "Lütfen önce bir öğrenci dosyası seçin!")
             return
         
+        # Kontrol: Dersler yüklendi mi?
+        db_check = Database()
+        conn_check = db_check.get_connection()
+        cursor_check = conn_check.cursor()
+        cursor_check.execute("SELECT COUNT(*) FROM courses WHERE department_id = ?", (self.department_id,))
+        course_count = cursor_check.fetchone()[0]
+        conn_check.close()
+        
+        if course_count == 0:
+            messagebox.showerror("Hata", "Öğrenci yüklemeden önce dersleri yüklemelisiniz!\n'courses' tablosu boş.")
+            return
+
         try:
             self.progress['value'] = 0
-            self.status_label.config(text="Excel dosyası okunuyor...")
+            self.status_label.config(text="Öğrenci Excel dosyası okunuyor...")
             self.root.update_idletasks()
             
-            # Excel'i oku
-            df = pd.read_excel(self.student_file_path.get())
+            # Excel'i oku (ilk satır başlık)
+            df = pd.read_excel(file_path)
             
             print("📋 Öğrenci Excel sütunları:", list(df.columns))
             
+            # Gerekli temel sütunları kontrol et (YENİ FORMATA GÖRE)
+            required_cols = ['Öğrenci No', 'Ad Soyad', 'Sınıf', 'Ders']
+            if not all(col in df.columns for col in required_cols):
+                messagebox.showerror("Hata", 
+                                    f"Excel formatı yanlış!\n\nBeklenen sütunlar: {required_cols}\n\nBulunan sütunlar: {list(df.columns)}")
+                self.status_label.config(text="Hata: Sütun isimleri yanlış.")
+                self.progress['value'] = 0
+                return
+
             self.progress['value'] = 30
-            self.status_label.config(text="Öğrenciler kaydediliyor...")
+            self.status_label.config(text="Öğrenciler ve ders atamaları kaydediliyor...")
             
-            # Database'e kaydet
             db = Database()
             conn = db.get_connection()
             cursor = conn.cursor()
             
-            success_count = 0
-            error_rows = []
-            total_courses_added = 0
+            # Hızlı işleme için ders kodlarını önbelleğe al (HashMap)
+            cursor.execute('SELECT code, id FROM courses WHERE department_id = ?', (self.department_id,))
+            course_code_to_id_map = {code: course_id for code, course_id in cursor.fetchall()}
+            print(f"   -> {len(course_code_to_id_map)} ders kodu önbelleğe alındı.")
             
+            # Hızlı işleme için öğrencileri önbelleğe al (HashMap)
+            cursor.execute('SELECT student_number, id FROM students WHERE department_id = ?', (self.department_id,))
+            student_no_to_id_map = {student_no: student_id for student_no, student_id in cursor.fetchall()}
+            print(f"   -> {len(student_no_to_id_map)} mevcut öğrenci önbelleğe alındı.")
+            
+            success_student_inserts = 0 # Yeni eklenen öğrenci sayısı
+            success_course_links = 0 # Yeni eklenen ders-öğrenci bağlantısı
+            error_rows = []
+            unknown_courses = set() # Bilinmeyen ders kodlarını bir kez göstermek için
+
+            total_rows = len(df)
             for index, row in df.iterrows():
                 try:
-                    row_num = index + 2  # Excel satır numarası (başlık + 1)
+                    row_num = index + 2 
                     
-                    # Temel öğrenci bilgilerini al
                     student_no = str(row['Öğrenci No']).strip()
                     name = str(row['Ad Soyad']).strip()
                     class_name = str(row['Sınıf']).strip()
+                    course_code = str(row['Ders']).strip() # Sütun adı 'Ders'
+
+                    if not student_no or not name or not course_code:
+                        print(f"❌ Satır {row_num} atlandı - Öğrenci No, Ad veya Ders Kodu boş.")
+                        error_rows.append(row_num)
+                        continue
+
+                    # 1. Öğrenciyi Ekle/Al
+                    student_id = student_no_to_id_map.get(student_no)
+                    if not student_id:
+                        # Öğrenci yok, ekle
+                        cursor.execute('''
+                            INSERT OR IGNORE INTO students 
+                            (student_number, name, class, department_id)
+                            VALUES (?, ?, ?, ?)
+                        ''', (student_no, name, class_name, self.department_id))
+                        # Yeni ID'yi al
+                        cursor.execute('SELECT id FROM students WHERE student_number = ?', (student_no,))
+                        student_id_result = cursor.fetchone()
+                        if not student_id_result:
+                            print(f"❌ Satır {row_num} - Öğrenci oluşturulamadı: {student_no}")
+                            error_rows.append(row_num)
+                            continue
+                        student_id = student_id_result[0]
+                        student_no_to_id_map[student_no] = student_id # Önbelleğe ekle
+                        success_student_inserts += 1
+
+                    # 2. Ders ID'sini Bul
+                    course_id = course_code_to_id_map.get(course_code)
                     
-                    print(f"👤 Öğrenci {student_no} işleniyor...")
-                    
-                    # Öğrenciyi ekle veya güncelle
-                    cursor.execute('''
-                        INSERT OR REPLACE INTO students 
-                        (student_number, name, class, department_id)
-                        VALUES (?, ?, ?, ?)
-                    ''', (student_no, name, class_name, self.department_id))
-                    
-                    # Öğrenci ID'sini al
-                    cursor.execute('SELECT id FROM students WHERE student_number = ?', (student_no,))
-                    student_id = cursor.fetchone()[0]
-                    
-                    # Ders sütunlarını bul (Ders1, Ders2, Ders3...)
-                    course_columns = [col for col in df.columns if 'Ders' in col]
-                    courses_added = 0
-                    
-                    print(f"  📚 Ders sütunları: {course_columns}")
-                    
-                    for col in course_columns:
-                        if pd.notna(row[col]):
-                            course_code = str(row[col]).strip()
-                            
-                            if course_code:  # Boş değilse
-                                # Ders ID'sini bul
-                                cursor.execute('SELECT id FROM courses WHERE code = ? AND department_id = ?', 
-                                            (course_code, self.department_id))
-                                course_result = cursor.fetchone()
-                                
-                                if course_result:
-                                    course_id = course_result[0]
-                                    
-                                    # Öğrenci-ders ilişkisini ekle (çakışma olmazsa)
-                                    cursor.execute('''
-                                        INSERT OR IGNORE INTO student_courses 
-                                        (student_id, course_id)
-                                        VALUES (?, ?)
-                                    ''', (student_id, course_id))
-                                    
-                                    if cursor.rowcount > 0:
-                                        courses_added += 1
-                                        total_courses_added += 1
-                                        print(f"    ✅ Ders eklendi: {course_code}")
-                                    else:
-                                        print(f"    ⚠️ Ders zaten ekli: {course_code}")
-                                else:
-                                    print(f"    ❌ Ders bulunamadı: {course_code}")
-                    
-                    success_count += 1
-                    print(f"✅ Öğrenci {student_no} tamamlandı - {courses_added} ders eklendi")
+                    if course_id:
+                        # 3. Öğrenci-Ders İlişkisini Ekle
+                        cursor.execute('''
+                            INSERT OR IGNORE INTO student_courses 
+                            (student_id, course_id)
+                            VALUES (?, ?)
+                        ''', (student_id, course_id))
+                        
+                        if cursor.rowcount > 0:
+                            success_course_links += 1
+                    else:
+                        # Ders bulunamadı
+                        if course_code not in unknown_courses:
+                            print(f"   -> Uyarı: Satır {row_num} - Ders kodu '{course_code}' 'courses' tablosunda (Dept ID: {self.department_id}) bulunamadı.")
+                            unknown_courses.add(course_code)
+                        error_rows.append(row_num)
                     
                 except Exception as e:
+                    print(f"❌ Satır {row_num} işlenirken hata: {e}")
                     error_rows.append(row_num)
-                    print(f"❌ Satır {row_num} hatası: {e}")
+                
+                self.progress['value'] = 30 + int(70 * (index + 1) / total_rows)
+                self.root.update_idletasks()
             
             conn.commit()
             conn.close()
             self.progress['value'] = 100
             
             messagebox.showinfo("Başarılı", 
-                            f"✅ Öğrenciler yüklendi!\n"
-                            f"👥 Toplam öğrenci: {success_count}\n"
-                            f"📚 Toplam ders ilişkisi: {total_courses_added}\n"
-                            f"❌ Hatalı satırlar: {len(error_rows)}")
+                            f"✅ Öğrenci yükleme tamamlandı!\n"
+                            f"👥 Yeni eklenen öğrenci: {success_student_inserts}\n"
+                            f"📚 Toplam {success_course_links} yeni ders ataması yapıldı.\n"
+                            f"❌ Hatalı/Atlanmış satır sayısı: {len(error_rows)}\n"
+                            f"❓ Bulunamayan Dersler: {len(unknown_courses)}")
             
-            self.status_label.config(text=f"Öğrenci yükleme tamamlandı - {success_count} öğrenci")
+            self.status_label.config(text=f"Öğrenci yükleme tamamlandı - {success_course_links} atama yapıldı.")
             
         except Exception as e:
-            messagebox.showerror("Hata", f"Dosya okuma hatası: {str(e)}")
+            messagebox.showerror("Hata", f"Dosya okuma/işleme hatası: {str(e)}")
             self.status_label.config(text="Hata oluştu!")
+            self.progress['value'] = 0
 
 if __name__ == "__main__":
-    app = ExcelUploadWindow()
+    # Test için
+    root = tk.Tk()
+    root.withdraw() # Ana test penceresini gizle
+    app = ExcelUploadWindow(department_id=1)
     app.show()
+    root.mainloop()
+

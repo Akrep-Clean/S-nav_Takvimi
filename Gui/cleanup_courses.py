@@ -14,7 +14,6 @@ from Data.database import Database
 db = Database()
 conn = db.get_connection()
 cursor = conn.cursor()
-
 # Tüm dersleri sil
 cursor.execute("DELETE FROM courses")
 conn.commit()
