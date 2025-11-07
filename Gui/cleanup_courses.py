@@ -18,11 +18,11 @@ cursor = conn.cursor()
 cursor.execute("DELETE FROM courses")
 conn.commit()
 
-print("✅ Tüm dersler silindi!")
+print(" Tüm dersler silindi!")
 
 
 cursor.execute("SELECT COUNT(*) FROM courses")
 remaining = cursor.fetchone()[0]
-print(f"📊 Kalan ders sayısı: {remaining}")
+print(f" Kalan ders sayısı: {remaining}")
 
 conn.close()

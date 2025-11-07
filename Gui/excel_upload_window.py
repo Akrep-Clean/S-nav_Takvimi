@@ -318,7 +318,7 @@ class ExcelUploadWindow:
                         
                 except Exception as e:
                     error_rows.append(row_num)
-                    print(f"❌ Satır {row_num} işlenirken hata: {e}")
+                    print(f" Satır {row_num} işlenirken hata: {e}")
                 
                 self.progress['value'] = 30 + int(70 * (index + 1) / total_rows)
                 self.root.update_idletasks()

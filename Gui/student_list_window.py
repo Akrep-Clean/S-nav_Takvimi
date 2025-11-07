@@ -19,7 +19,7 @@ class StudentListWindow:
         self.department_id = department_id if department_id else 1
         
         
-        print(f"🎯 StudentListWindow AÇILDI - Department ID: {self.department_id}")
+        print(f" StudentListWindow AÇILDI - Department ID: {self.department_id}")
         self.create_widgets()
         self.load_students()
     
