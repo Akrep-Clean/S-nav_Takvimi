@@ -67,16 +67,16 @@ class LoginWindow:
             messagebox.showerror("Hata", "Lütfen tüm alanları doldurun.")
             return
         
-        # VERİTABANI İLE GİRİŞ KONTROLÜ
+       
         try:
             db = Database()
             conn = db.get_connection()
             cursor = conn.cursor()
             
-            # Şifreyi hash'le
+            
             hashed_password = hashlib.md5(password.encode()).hexdigest()
             
-            # Kullanıcıyı veritabanında ara
+            
             cursor.execute('''
                 SELECT * FROM users WHERE email = ? AND password = ?
             ''', (email, hashed_password))
@@ -89,15 +89,14 @@ class LoginWindow:
                 messagebox.showinfo("Başarılı", f"{role} olarak giriş yapıldı!")
                 self.root.destroy()
                 
-                # Rol'e göre yönlendirme
+                
                 if role == "admin":
-                    # Önce admin_window dosyasını oluşturmamız lazım
+                   
                     messagebox.showinfo("Yönlendirme", "Admin paneline yönlendiriliyor...")
                     
                     admin_window.AdminWindow().show()
                 elif role == "coordinator":
-                    # import coordinator_window
-                    # coordinator_window.CoordinatorWindow(department_id).show()
+
                     messagebox.showinfo("Yönlendirme", "Koordinatör paneline yönlendiriliyor...")
             else:
                 messagebox.showerror("Hata", "Geçersiz e-mail veya şifre.")

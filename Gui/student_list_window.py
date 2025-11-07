@@ -15,10 +15,10 @@ class StudentListWindow:
         self.root.title("Öğrenci Listesi")
         self.root.geometry("800x500")
         self.root.configure(bg="#f0f0f0")
-    # DEPARTMENT ID'Yİ KESİN AYARLA
+    
         self.department_id = department_id if department_id else 1
         
-        # DEBUG
+        
         print(f"🎯 StudentListWindow AÇILDI - Department ID: {self.department_id}")
         self.create_widgets()
         self.load_students()
@@ -27,7 +27,7 @@ class StudentListWindow:
         self.root.mainloop()
         
     def create_widgets(self):
-        # BAŞLIK
+        
         title_label = tk.Label(
             self.root,
             text="Öğrenci Listesi",
@@ -37,7 +37,7 @@ class StudentListWindow:
         )
         title_label.pack(pady=20)
         
-        # ARAMA FRAME
+        
         search_frame = tk.Frame(self.root, bg="#f0f0f0")
         search_frame.pack(pady=10)
         
@@ -55,7 +55,7 @@ class StudentListWindow:
         )
         search_btn.pack(side="left", padx=5)
         
-        # TÜMÜNÜ GÖSTER BUTONU
+        
         show_all_btn = tk.Button(
             search_frame,
             text="Tümünü Göster",
@@ -66,7 +66,7 @@ class StudentListWindow:
         )
         show_all_btn.pack(side="left", padx=5)
         
-        # TREEVIEW
+        
         tree_frame = tk.Frame(self.root)
         tree_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
@@ -107,15 +107,15 @@ class StudentListWindow:
             
             students = cursor.fetchall()
             
-            # Treeview'ı temizle
+            
             for item in self.tree.get_children():
                 self.tree.delete(item)
             
-            # Öğrencileri ekle
+            
             for student in students:
                 student_no, name, class_name = student
                 
-                # Öğrencinin aldığı dersleri getir
+                
                 cursor.execute('''
                     SELECT c.code, c.name 
                     FROM student_courses sc
@@ -155,13 +155,13 @@ class StudentListWindow:
             student = cursor.fetchone()
             
             if student:
-                # Treeview'ı temizle ve sadece bulunan öğrenciyi göster
+                
                 for item in self.tree.get_children():
                     self.tree.delete(item)
                 
                 student_no, name, class_name = student
                 
-                # Öğrencinin aldığı dersleri getir
+                
                 cursor.execute('''
                     SELECT c.code, c.name 
                     FROM student_courses sc

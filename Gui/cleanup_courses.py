@@ -14,13 +14,13 @@ from Data.database import Database
 db = Database()
 conn = db.get_connection()
 cursor = conn.cursor()
-# Tüm dersleri sil
+
 cursor.execute("DELETE FROM courses")
 conn.commit()
 
 print("✅ Tüm dersler silindi!")
 
-# Kontrol et
+
 cursor.execute("SELECT COUNT(*) FROM courses")
 remaining = cursor.fetchone()[0]
 print(f"📊 Kalan ders sayısı: {remaining}")

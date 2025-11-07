@@ -7,11 +7,9 @@ import os
 import sys
 import traceback
 
-# --- Veritabanı importu için sys.path ayarı ---
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
-# --- Bitiş ---
 
 from Data.database import Database
 
@@ -20,11 +18,7 @@ class ExamScheduler:
         self.department_id = department_id
         self.db = Database()
 
-    # --- Sınıf Seviyesi Fonksiyonu ---
     def get_course_class_levels(self):
-        """
-        Her dersin ağırlıklı olarak hangi sınıf seviyesindeki öğrenciler tarafından alındığını belirler.
-        """
         conn = self.db.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
@@ -44,11 +38,7 @@ class ExamScheduler:
                 course_class_map[course_id] = class_level
         return course_class_map
 
-    # --- Çakışma Matrisi Fonksiyonu ---
     def get_student_course_conflicts(self):
-        """
-        Öğrenci bazlı ders çakışma matrisini oluşturur.
-        """
         conn = self.db.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
@@ -73,12 +63,7 @@ class ExamScheduler:
                     conflict_matrix[c2].add(c1)
         return conflict_matrix
 
-    # --- Ders Detayları (Öğrenci Sayısı, Hoca) Fonksiyonu ---
     def get_course_details(self):
-        """
-        Her dersin öğrenci sayısını ve diğer bilgilerini alır.
-        Dönüş: {course_id: {'code': ..., 'name': ..., 'count': ..., 'instructor': ...}}
-        """
         conn = self.db.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
@@ -99,15 +84,11 @@ class ExamScheduler:
             for course_id, code, name, instructor, count in course_counts_raw
         }
 
-    # --- Graph Coloring (Slot Oluşturma) Fonksiyonu ---
     def create_exam_slots(self, conflict_matrix, course_details, course_class_levels):
-        """
-        Dersleri çakışmayacak ve sınıf seviyelerini dağıtacak şekilde soyut slotlara atar.
-        """
         courses_sorted = sorted(course_details.keys(),
                               key=lambda cid: (
-                                  -course_details[cid]['count'], # Önce en kalabalık
-                                  course_class_levels.get(cid, "Bilinmiyor") # Sonra sınıfa göre grupla
+                                  -course_details[cid]['count'],
+                                  course_class_levels.get(cid, "Bilinmiyor")
                               ),
                               reverse=False)
 
@@ -126,25 +107,25 @@ class ExamScheduler:
                 if conflicting_course_id in course_to_slot_map:
                     conflicting_slots.add(course_to_slot_map[conflicting_course_id])
 
-            preferred_slot = -1 # Sınıf çakışması olmayan
-            fallback_slot = -1 # Sınıf çakışması olan
+            preferred_slot = -1
+            fallback_slot = -1
 
             for slot in range(current_slot + 1):
                 if slot in conflicting_slots:
                     continue 
 
                 if course_level != "Bilinmiyor" and course_level in slot_class_levels[slot]:
-                    if fallback_slot == -1: # İlk bulduğumuz sınıf çakışmalı slot
+                    if fallback_slot == -1:
                         fallback_slot = slot
                 else:
-                    preferred_slot = slot # Sınıf çakışması yok, bu en iyisi
-                    break # En iyi slotu bulduk, aramayı durdur.
+                    preferred_slot = slot
+                    break 
 
             if preferred_slot != -1:
                 suitable_slot = preferred_slot
-            elif fallback_slot != -1: # Sınıf çakışmasız slot yoksa, çakışmalı olana ata
+            elif fallback_slot != -1:
                 suitable_slot = fallback_slot
-            else: # Hiç uygun slot yoksa (veya ilk dersse)
+            else:
                 current_slot += 1
                 suitable_slot = current_slot
             
@@ -156,9 +137,7 @@ class ExamScheduler:
         print(f"   -> Graph Coloring Sonucu: {len(slot_courses_map)} slot oluşturuldu.")
         return slot_courses_map
 
-    # --- Derslik Uygunluk Fonksiyonu ---
     def is_classroom_available(self, calendar, date_str, start_dt, end_dt, classroom_id):
-        """Dersliğin verilen zaman aralığında boş olup olmadığını kontrol eder."""
         if date_str not in calendar or classroom_id not in calendar[date_str]:
             return True 
 
@@ -168,7 +147,6 @@ class ExamScheduler:
                 return False
         return True
 
-    # --- GÜNCELLENMİŞ: Sınav Bölme Mantığı Aktif ---
     def assign_classrooms_and_times(self, slot_courses_map, course_details,
                                      start_date_str, end_date_str,
                                      default_duration=75, break_time=15,
@@ -178,7 +156,6 @@ class ExamScheduler:
         
         conn = self.db.get_connection()
         cursor = conn.cursor()
-        # Derslikleri BÜYÜKTEN KÜÇÜĞE sırala (Sınav bölme için)
         cursor.execute('''
             SELECT id, code, name, capacity FROM classrooms
             WHERE department_id = ?
@@ -216,7 +193,6 @@ class ExamScheduler:
             print(f"-> Gün işleniyor: {current_date}")
             current_slot_time_dt = datetime.combine(current_date, day_start_time)
             
-            # O gün yerleştirebildiğimiz kadar slot yerleştirelim
             while processed_slots < len(sorted_slots):
                 slot_key = sorted_slots[processed_slots]
                 courses_in_slot = slot_courses_map[slot_key]
@@ -241,7 +217,7 @@ class ExamScheduler:
                         exam_end_time_dt = possible_start_time_dt + timedelta(minutes=duration)
 
                         if exam_end_time_dt.time() > day_end_time or exam_end_time_dt.date() != current_date:
-                            if exam_end_time_dt.time() <= time(0, 0): # Gece yarısını geçtiyse (örn: 23:00 + 75dk)
+                            if exam_end_time_dt.time() <= time(0, 0):
                                 print(f"      -> Sınav gün sonunu (gece yarısı) aşıyor ({details['code']})")
                             else:
                                 print(f"      -> Sınav gün bitiş saatini ({day_end_time_str}) aşıyor ({details['code']})")
@@ -249,7 +225,6 @@ class ExamScheduler:
                             all_courses_in_slot_assigned = False
                             break 
 
-                        # --- SINAV BÖLME MANTIĞI ---
                         needed_capacity = student_count
                         assigned_classrooms_for_this_course = []
                         
@@ -278,12 +253,10 @@ class ExamScheduler:
                                 'start_dt': possible_start_time_dt, 'end_dt': exam_end_time_dt,
                                 'assigned_classrooms': assigned_classrooms_for_this_course
                             })
-                        # --- SINAV BÖLME SONU ---
 
                     if day_ended_for_this_slot_duration:
-                        # Bu saat dilimi gün sonunu aştı, bu gün için daha fazla deneme
                         print(f"   -> Gün sonuna ulaşıldı, {current_date_str} için başka atama denenmeyecek.")
-                        break # Saat arama döngüsünden (Inner Loop 2) çık
+                        break 
 
                     if all_courses_in_slot_assigned:
                         latest_end_time_in_slot = possible_start_time_dt
@@ -299,7 +272,7 @@ class ExamScheduler:
                             for room in assignment['assigned_classrooms']:
                                 classroom_id = room['classroom_id']
                                 classroom_codes.append(room['classroom_code'])
-                                classroom_ids.append(str(classroom_id)) # Stringe çevir
+                                classroom_ids.append(str(classroom_id))
                                 total_capacity += room['capacity']
                                 
                                 calendar[current_date_str][classroom_id].append((assignment['start_dt'], assignment['end_dt']))
@@ -317,16 +290,16 @@ class ExamScheduler:
                                 'date': current_date_str,
                                 'time': assignment['start_dt'].strftime('%H:%M'),
                                 'duration': assignment['duration'],
-                                'classroom_id': ','.join(classroom_ids), # ID'leri birleştir
-                                'classroom_code': ','.join(classroom_codes), # Kodları birleştir
-                                'capacity': total_capacity # Toplam kapasite
+                                'classroom_id': ','.join(classroom_ids),
+                                'classroom_code': ','.join(classroom_codes),
+                                'capacity': total_capacity
                             })
 
                         print(f"   => Slot {slot_key} atandı: {current_date_str} {possible_start_time_dt.strftime('%H:%M')}")
                         slot_successfully_placed = True
                         processed_slots += 1
                         current_slot_time_dt = latest_end_time_in_slot + timedelta(minutes=break_time)
-                        break # Saat arama döngüsünden (Inner Loop 2) çık
+                        break 
                     
                     else:
                          possible_start_time_dt += timedelta(minutes=break_time) 
@@ -339,7 +312,7 @@ class ExamScheduler:
 
 
         if processed_slots < len(sorted_slots):
-            print(f"❌ Tarih aralığı {start_date_str} - {end_date_str} yetersiz!")
+            print(f" Tarih aralığı {start_date_str} - {end_date_str} yetersiz!")
             for slot_key in sorted_slots[processed_slots:]:
                  for course_id in slot_courses_map[slot_key]:
                       details = course_details[course_id]
@@ -351,12 +324,8 @@ class ExamScheduler:
 
         return exam_schedule, unassigned_exams
 
-    # --- Ana Fonksiyon (Güncellendi) ---
     def generate_exam_schedule(self, start_date, end_date, exam_type="Vize",
                                default_duration=75, break_time=15, excluded_days=[]):
-        """
-        Tüm sınav programını oluşturur.
-        """
         exam_schedule = []
         unassigned_exams = []
         try:
@@ -368,7 +337,6 @@ class ExamScheduler:
             if not course_details:
                  raise ValueError("Veritabanında planlanacak ders bulunamadı (Excel yüklendi mi?).")
             
-            # 0 öğrencili dersleri filtrele
             courses_with_students = {cid: det for cid, det in course_details.items() if det['count'] > 0}
             if not courses_with_students:
                  raise ValueError("Planlanacak (öğrencisi olan) ders bulunamadı.")
@@ -405,15 +373,13 @@ class ExamScheduler:
             print(f"--------------------------------------------")
 
         except ValueError as ve:
-             print(f"❌ Veri/Yapılandırma Hatası: {ve}")
+             print(f" Veri/Yapılandırma Hatası: {ve}")
         except Exception as e:
-            print(f"❌ Beklenmedik Hata: {e}")
+            print(f"Beklenmedik Hata: {e}")
             traceback.print_exc()
 
         return exam_schedule, unassigned_exams
 
-
-# --- Test Bloğu ---
 if __name__ == "__main__":
     scheduler = ExamScheduler(department_id=1) 
 
@@ -425,15 +391,14 @@ if __name__ == "__main__":
     schedule, unassigned = scheduler.generate_exam_schedule(start, end, exam_type, excluded_days=excluded)
 
     if schedule:
-        print("\n📋 OLUŞTURULAN SINAV PROGRAMI (İlk 20):")
+        print("\n OLUŞTURULAN SINAV PROGRAMI (İlk 20):")
         schedule.sort(key=lambda x: (x['date'], x['time']))
         for exam in schedule[:20]:
             print(f"   {exam['date']} {exam['time']} ({exam['duration']} dk) - {exam['course_code']} ({exam['student_count']} öğr.) -> {exam['classroom_code']} (Toplam Kap: {exam['capacity']})")
     else:
-        print("\n❌ Sınav programı oluşturulamadı veya boş döndü.")
+        print("\nSınav programı oluşturulamadı veya boş döndü.")
 
     if unassigned:
-        print("\n⚠️ ATANAMAYAN SINAVLAR:")
+        print("\n ATANAMAYAN SINAVLAR:")
         for exam in unassigned:
              print(f"   - {exam['course_code']} ({exam['course_name']}): {exam.get('reason', 'Atanamadı')}")
-

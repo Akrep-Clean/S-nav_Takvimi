@@ -30,7 +30,7 @@ class CourseListWindow:
         self.root.mainloop()
         
     def create_widgets(self):
-        # BAŞLIK
+        
         title_label = tk.Label(
             self.root,
             text="Ders Listesi",
@@ -40,11 +40,11 @@ class CourseListWindow:
         )
         title_label.pack(pady=20)
         
-        # ANA FRAME
+        
         main_frame = tk.Frame(self.root, bg="#f0f0f0")
         main_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
-        # SOL TARAF - DERS LİSTESİ
+        
         left_frame = tk.LabelFrame(
             main_frame,
             text="Tüm Dersler",
@@ -55,7 +55,7 @@ class CourseListWindow:
         )
         left_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
         
-        # Ders Listesi Treeview
+        
         self.course_tree = ttk.Treeview(
             left_frame,
             columns=("Kod", "Ad", "Hoca", "Tip"),
@@ -79,7 +79,7 @@ class CourseListWindow:
         self.course_tree.pack(side="left", fill="both", expand=True)
         course_scrollbar.pack(side="right", fill="y")
         
-        # Sağ taraf - Öğrenci Listesi
+        
         right_frame = tk.LabelFrame(
             main_frame,
             text="Dersi Alan Öğrenciler",
@@ -111,7 +111,7 @@ class CourseListWindow:
         self.student_tree.pack(side="left", fill="both", expand=True)
         student_scrollbar.pack(side="right", fill="y")
         
-        # Event binding
+        
         self.course_tree.bind("<<TreeviewSelect>>", self.on_course_select)
     
     def load_courses(self):
@@ -128,11 +128,11 @@ class CourseListWindow:
             
             courses = cursor.fetchall()
             
-            # Treeview'ı temizle
+           
             for item in self.course_tree.get_children():
                 self.course_tree.delete(item)
             
-            # Dersleri ekle
+            
             for course in courses:
                 code, name, instructor, course_type = course
                 self.course_tree.insert("", "end", values=(code, name, instructor, course_type))
@@ -156,7 +156,7 @@ class CourseListWindow:
         
         self.load_students_for_course(course_code)
         
-        # Pencere başlığını güncelle
+        
         self.root.title(f"Ders Listesi - {course_code} {course_name}")
     
     def load_students_for_course(self, course_code):
@@ -165,11 +165,11 @@ class CourseListWindow:
             conn = db.get_connection()
             cursor = conn.cursor()
             
-            # DEBUG: Kontrol mesajları
+            
             print(f"🔍 Ders için öğrenciler aranıyor: {course_code}")
             print(f"🎯 Department ID: {self.department_id}")
             
-            # Önce dersin ID'sini bulalım
+            
             cursor.execute('''
                 SELECT id FROM courses 
                 WHERE code = ? AND department_id = ?
@@ -179,7 +179,7 @@ class CourseListWindow:
             
             if not course_result:
                 print(f"❌ Ders bulunamadı: {course_code}")
-                # Treeview'ı temizle
+                
                 for item in self.student_tree.get_children():
                     self.student_tree.delete(item)
                 conn.close()
@@ -188,7 +188,7 @@ class CourseListWindow:
             course_id = course_result[0]
             print(f"✅ Ders ID bulundu: {course_id}")
             
-            # Bu dersi alan öğrencileri getir
+            
             cursor.execute('''
                 SELECT s.student_number, s.name, s.class
                 FROM students s
@@ -201,11 +201,11 @@ class CourseListWindow:
             
             print(f"📊 {course_code} dersini alan öğrenci sayısı: {len(students)}")
             
-            # Treeview'ı temizle
+            
             for item in self.student_tree.get_children():
                 self.student_tree.delete(item)
             
-            # Öğrencileri ekle
+            
             for student in students:
                 student_no, name, class_name = student
                 self.student_tree.insert("", "end", values=(student_no, name, class_name))
@@ -213,7 +213,7 @@ class CourseListWindow:
             
             conn.close()
             
-            # Bilgi mesajı
+            
             if len(students) > 0:
                 self.root.title(f"Ders Listesi - {course_code} ({len(students)} öğrenci)")
             else:
